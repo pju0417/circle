@@ -63,6 +63,16 @@ input[type=number]{width:100px}
 details{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-top:8px;background:#fcfaff}
 summary{cursor:pointer;font-weight:700}
 .sol{margin-top:8px;padding:8px 10px;border-radius:10px;background:#f1f9f1;font-size:14px}
+.piece{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:760px){.piece{grid-template-columns:1.2fr 1fr}}
+.piece canvas{display:block;width:100%;aspect-ratio:2/1;background:#fbf9ff;border-radius:12px;border:1px solid var(--line)}
+table.cmp{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+table.cmp th,table.cmp td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp th{color:var(--sub);font-weight:700;font-size:13px}
+table.cmp tr.now td{background:#fff3cf;font-weight:700}
+.tblwrap{overflow-x:auto}
+.pinfo .line{padding:7px 10px;border-radius:10px;background:var(--main-l);margin-bottom:6px;font-size:15px}
 footer{color:var(--sub);font-size:12px;text-align:center;margin:18px 0 8px}
 ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
@@ -135,6 +145,29 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
       </div>
     </aside>
   </div>
+
+  <section class="card" style="margin-top:14px" aria-label="조각 한 개 살펴보기">
+    <h2>조각 한 개를 살펴볼까요</h2>
+    <div class="piece">
+      <div>
+        <canvas id="cv2" role="img" aria-label="조각 한 개와 그 호를 확대한 그림"></canvas>
+        <div class="legend">
+          <span><i style="background:var(--mag)"></i>호(곡선)</span>
+          <span><i style="background:#e03a3a"></i>직선(현)</span>
+          <span><i style="background:#f6c9c9"></i>호와 직선 사이</span>
+        </div>
+      </div>
+      <div>
+        <div class="pinfo" id="pieceInfo"></div>
+        <div class="tblwrap"><table class="cmp" id="cmpTable"></table></div>
+      </div>
+    </div>
+    <details>
+      <summary>예상해 볼까요: 64등분으로 바꾸면 곡선이 어떻게 보일까요?</summary>
+      <p style="margin:8px 0 0">등분 수를 64로 바꿔 보세요. 호와 직선 사이가 거의 없어져서, 조각의 둥근 부분이 곧은 선처럼 보여요.
+      그래서 이어 붙인 모양의 윗변과 아랫변이 곧은 선에 가까워지고, 전체가 직사각형에 가까워집니다.</p>
+    </details>
+  </section>
 
   <section class="card" style="margin-top:14px" aria-live="polite">
     <h2>식으로 정리하기</h2>
@@ -382,7 +415,7 @@ function sync() {
   $("prog").value = Math.round(S.p * 100);
   $("nsl").value = S.n / 2;
   document.querySelectorAll("#presets button").forEach(b => b.classList.toggle("on", +b.dataset.n === S.n));
-  draw();
+  draw(); drawPiece(); pieceInfo();
 }
 
 /* ---------- 애니메이션 ---------- */
@@ -400,6 +433,62 @@ function play() {
   S.anim = requestAnimationFrame(step);
 }
 
+/* ---------- 조각 한 개 살펴보기 ---------- */
+const cv2 = $("cv2");
+function drawPiece() {
+  const ctx = cv2.getContext("2d");
+  const rect = cv2.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const W = rect.width, H = rect.height;
+  if (!W || !H) return;
+  if (cv2.width !== Math.round(W * dpr) || cv2.height !== Math.round(H * dpr)) {
+    cv2.width = Math.round(W * dpr); cv2.height = Math.round(H * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2), hw = W / 2;
+  ctx.textAlign = "center"; ctx.font = "700 13px sans-serif";
+
+  /* 왼쪽: 조각 한 개 */
+  const Rp = Math.min(H * 0.74, hw * 0.86 / (2 * s)), ax = hw / 2, ay = H * 0.9;
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, Rp, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2); ctx.closePath();
+  ctx.fillStyle = "#cfeccb"; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(70,50,90,.6)"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ax, ay, Rp, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2);
+  ctx.lineWidth = 3; ctx.strokeStyle = "#d6208a"; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax - Rp * s, ay - Rp * c); ctx.lineTo(ax + Rp * s, ay - Rp * c);
+  ctx.lineWidth = 2.2; ctx.strokeStyle = "#e03a3a"; ctx.stroke();
+  ctx.fillStyle = "#5f3a9c"; ctx.fillText("① " + N + "등분한 조각 한 개", hw / 2, 20);
+
+  /* 가운데 선 */
+  ctx.strokeStyle = "#e4dcf2"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hw, 8); ctx.lineTo(hw, H - 8); ctx.stroke();
+
+  /* 오른쪽: 호를 같은 길이로 키워서 보기 (호의 가로 길이를 화면 폭에 맞춤) */
+  const k = 0.8 * hw / (2 * s), cx = hw + hw / 2, yb = H * 0.66;
+  const pts = []; for (let i = 0; i <= 60; i++) { const f = -th / 2 + th * i / 60; pts.push([cx + k * Math.sin(f), yb - k * (Math.cos(f) - c)]); }
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.forEach(q => ctx.lineTo(q[0], q[1])); ctx.closePath();
+  ctx.fillStyle = "#f6c9c9"; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.forEach(q => ctx.lineTo(q[0], q[1]));
+  ctx.lineWidth = 3.2; ctx.strokeStyle = "#d6208a"; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - k * s, yb); ctx.lineTo(cx + k * s, yb);
+  ctx.lineWidth = 2.4; ctx.strokeStyle = "#e03a3a"; ctx.stroke();
+  ctx.fillStyle = "#5f3a9c"; ctx.fillText("② 호를 크게 키워 보면", cx, 20);
+  ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b6280";
+  ctx.fillText("(호의 길이를 같게 맞춘 그림)", cx, H - 10);
+}
+const fmtP = x => x >= 10 ? x.toFixed(2) : x >= 1 ? x.toFixed(3) : x.toFixed(4);
+function pieceInfo() {
+  const N = S.n, r = S.r, x = Math.PI / N;
+  const arc = 2 * r * x, chord = 2 * r * Math.sin(x), gap = r * (1 - Math.cos(x)), diff = (1 - chord / arc) * 100;
+  $("pieceInfo").innerHTML =
+    `<div class="line">호의 길이 <b>${fmtP(arc)} cm</b></div>
+     <div class="line">직선(현)의 길이 <b>${fmtP(chord)} cm</b></div>
+     <div class="line">호와 직선의 길이 차이 <b>${diff < 0.0005 ? "거의 없음" : (diff < 1 ? diff.toFixed(3) : diff.toFixed(2)) + "%"}</b>
+       <small style="display:block;color:var(--sub)">호와 직선 사이가 가장 벌어진 곳: ${fmtP(gap * 10)} mm</small></div>`;
+  const list = [...new Set([8, 16, 32, 64, 128, N])].sort((a, b) => a - b);
+  $("cmpTable").innerHTML = "<tr><th>등분 수</th><th>호 (cm)</th><th>직선 (cm)</th><th>차이</th></tr>" + list.map(n => {
+    const xx = Math.PI / n, a = 2 * r * xx, ch = 2 * r * Math.sin(xx), d = (1 - ch / a) * 100;
+    return `<tr class="${n === N ? "now" : ""}"><td>${n}등분${n === N ? " (지금)" : ""}</td><td>${fmtP(a)}</td><td>${fmtP(ch)}</td><td>${d < 0.0005 ? "≈ 0" : (d < 1 ? d.toFixed(3) : d.toFixed(2)) + "%"}</td></tr>`;
+  }).join("");
+}
+
 /* ---------- 이벤트 ---------- */
 const presets = $("presets");
 [8, 16, 32, 64, 128].forEach(n => {
@@ -412,7 +501,7 @@ $("nsl").addEventListener("input", e => { S.n = +e.target.value * 2; sync(); upd
 $("prog").addEventListener("input", e => { stop(); S.p = e.target.value / 100; sync(); });
 $("play").addEventListener("click", play);
 $("reset").addEventListener("click", () => { stop(); S.p = 0; sync(); });
-$("rad").addEventListener("input", e => { const v = parseFloat(e.target.value); if (v > 0) { S.r = v; updateInfo(); draw(); } });
+$("rad").addEventListener("input", e => { const v = parseFloat(e.target.value); if (v > 0) { S.r = v; updateInfo(); draw(); pieceInfo(); } });
 $("pi").addEventListener("change", e => { S.pi = e.target.value; updateInfo(); draw(); });
 $("tColor").addEventListener("change", e => { S.color = e.target.checked;
   $("legend").style.display = S.color ? "" : "none"; draw(); });
@@ -426,7 +515,7 @@ function manualSync() { S.zoom = Math.pow(5, $("zoom").value / 100); S.pan = $("
 $("zoom").addEventListener("input", manualSync); $("pan").addEventListener("input", manualSync);
 $("tAuto").addEventListener("change", e => { S.auto = e.target.checked; $("manual").hidden = S.auto; manualSync(); });
 addEventListener("resize", draw);
-if (window.ResizeObserver) new ResizeObserver(draw).observe(cv);
+if (window.ResizeObserver) { new ResizeObserver(draw).observe(cv); new ResizeObserver(drawPiece).observe(cv2); }
 
 /* ---------- 퀴즈 ---------- */
 function fb(id, ok, msgOk, msgBad) {
