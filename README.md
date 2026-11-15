@@ -8,8 +8,8 @@
 - 그림 PNG 저장
 
 ## 배포 (GitHub Pages)
-1. 이 브랜치를 `main`에 병합합니다.
-2. 저장소 **Settings → Pages → Build and deployment → Source: Deploy from a branch**, Branch: `main` / `(root)` 선택 후 Save.
+1. 저장소 **Settings → Pages → Build and deployment → Source: Deploy from a branch** 를 선택합니다.
+2. Branch를 `claude/great-cray-w82ppm` / `(root)` 로 지정하고 Save 합니다.
 3. 잠시 후 `https://pju0417.github.io/circle/` 로 접속할 수 있습니다.
 
 외부 라이브러리 없이 `index.html` 하나로 동작합니다.
