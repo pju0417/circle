@@ -73,7 +73,7 @@ table.cmp th{color:var(--sub);font-weight:700;font-size:13px}
 table.cmp tr.now td{background:#fff3cf;font-weight:700}
 .tblwrap{overflow-x:auto}
 .pieceBox{margin-top:16px}
-.pieceBox canvas{display:block;width:100%;aspect-ratio:2/1;background:#fbf9ff;border-radius:12px;border:1px solid var(--line)}
+.pieceBox canvas{display:block;width:100%;aspect-ratio:4/3;background:#fbf9ff;border-radius:12px;border:1px solid var(--line)}
 .pmsg{margin-top:8px;padding:8px 12px;border-radius:10px;background:#fff3cf;font-weight:700;font-size:15px;text-align:center}
 .pinfo .line{padding:7px 10px;border-radius:10px;background:var(--main-l);margin-bottom:6px;font-size:15px}
 footer{color:var(--sub);font-size:12px;text-align:center;margin:18px 0 8px}
@@ -96,7 +96,7 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
     <ol class="guide">
       <li>‘자르고 이어 붙이기’ 버튼을 누르거나 진행도 막대를 천천히 움직여 보세요.</li>
       <li>등분 수를 8 → 16 → 32 → 64로 바꾸면 이어 붙인 모양이 어떤 도형에 가까워지는지 관찰해 보세요.</li>
-      <li>등분 수가 많을 때는 조각이 하나씩 붙는 자리를 확대해서 보여 주고, 다 붙으면 다시 축소해서 전체를 보여 줘요. 이어 붙인 모양의 가로·세로가 원의 무엇과 같은지 아래 식에서 확인해 보세요.</li>
+      <li>등분 수가 많을 때는 조각이 하나씩 붙는 자리를 확대해서 보여 주고, 다 붙으면 다시 축소해서 전체를 보여 줘요. 이어 붙인 모양의 가로와 세로가 원의 무엇과 같은지 그림에서 찾아보세요.</li>
     </ol>
   </div>
 
@@ -131,11 +131,6 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
     </aside>
   </div>
 
-  <section class="card" style="margin-top:14px" aria-live="polite">
-    <h2>식으로 정리하기</h2>
-    <div class="steps" id="steps"></div>
-  </section>
-
   <footer>수학 6-2 5단원 「원의 둘레와 넓이」 · 원의 넓이를 구하는 방법(교과서 108~109쪽) 활동을 돕는 학습 도구</footer>
 </div>
 
@@ -159,7 +154,7 @@ const cv = $("cv");
 function layout(W, H) {
   const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2);
   const TOP = 46, GAP = 0.2;
-  const R = Math.max(10, Math.min(W / (Math.PI + 0.7), (H - TOP - 10) / (3 + GAP - (1 - c))));
+  const R = Math.max(10, Math.min(W / (Math.PI + 0.7), (H - TOP - 10) / (3 + GAP + (1 - c))));
   const Y0 = TOP + R * (1 - c);                 // 주황 조각의 뾰족한 끝(윗줄) 높이
   const CX = W / 2, CY = Y0 + R + GAP * R + R;  // 원의 중심
   const X0 = W / 2 - (N - 1) * s * R / 2;
@@ -307,20 +302,6 @@ function draw() {
 }
 
 /* ---------- 설명·식 ---------- */
-function updateInfo() {
-  const r = S.r, pi = piVal(), d = 2 * r;
-  const C = d * pi, half = C / 2, area = r * r * pi;
-  const m = approxMark();
-  $("steps").innerHTML =
-    `<div class="line">지름 = 반지름 × 2 = ${fmt(r)} × 2 = <b>${fmt(d)} cm</b></div>
-     <div class="line">원주 = 지름 × 원주율 = ${fmt(d)} × ${piTxt()} ${m}<b>${num(C)} cm</b></div>
-     <div class="line">직사각형의 가로 = 원주 × ½ ${m}<b>${num(half)} cm</b>
-       <small>(= 지름 × 원주율 × ½ = 반지름 × 원주율)</small></div>
-     <div class="line">직사각형의 세로 = 반지름 = <b>${fmt(r)} cm</b></div>
-     <div class="line key">원의 넓이 = 가로 × 세로 = ${num(half)} × ${fmt(r)} ${m}${num(area)} cm²
-       <small>= (반지름) × (반지름) × (원주율) = ${fmt(r)} × ${fmt(r)} × ${piTxt()}</small></div>` ;
-}
-
 function sync() {
   $("nV").textContent = S.n + "등분";
   $("progV").textContent = Math.round(S.p * 100) + "%";
@@ -356,32 +337,22 @@ function drawPiece() {
     cv2.width = Math.round(W * dpr); cv2.height = Math.round(H * dpr);
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-  const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2), hw = W / 2;
-  ctx.textAlign = "center"; ctx.font = "700 13px sans-serif";
-
-  /* 왼쪽: 조각 한 개 */
-  const Rp = Math.min(H * 0.74, hw * 0.86 / (2 * s)), ax = hw / 2, ay = H * 0.9;
-  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, Rp, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2); ctx.closePath();
-  ctx.fillStyle = "#cfeccb"; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(70,50,90,.6)"; ctx.stroke();
-  ctx.beginPath(); ctx.arc(ax, ay, Rp, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2);
-  ctx.lineWidth = 3; ctx.strokeStyle = "#d6208a"; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(ax - Rp * s, ay - Rp * c); ctx.lineTo(ax + Rp * s, ay - Rp * c);
-  ctx.lineWidth = 2.2; ctx.strokeStyle = "#e03a3a"; ctx.stroke();
-  ctx.fillStyle = "#5f3a9c"; ctx.fillText("한 조각 (" + N + "등분)", hw / 2, 20);
-
-  /* 가운데 선 */
-  ctx.strokeStyle = "#e4dcf2"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hw, 8); ctx.lineTo(hw, H - 8); ctx.stroke();
-
-  /* 오른쪽: 호를 같은 길이로 키워서 보기 (호의 가로 길이를 화면 폭에 맞춤) */
-  const k = 0.8 * hw / (2 * s), cx = hw + hw / 2, yb = H * 0.66;
-  const pts = []; for (let i = 0; i <= 60; i++) { const f = -th / 2 + th * i / 60; pts.push([cx + k * Math.sin(f), yb - k * (Math.cos(f) - c)]); }
-  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.forEach(q => ctx.lineTo(q[0], q[1])); ctx.closePath();
-  ctx.fillStyle = "#f6c9c9"; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.forEach(q => ctx.lineTo(q[0], q[1]));
-  ctx.lineWidth = 3.2; ctx.strokeStyle = "#d6208a"; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - k * s, yb); ctx.lineTo(cx + k * s, yb);
-  ctx.lineWidth = 2.4; ctx.strokeStyle = "#e03a3a"; ctx.stroke();
-  ctx.fillStyle = "#5f3a9c"; ctx.fillText("윗부분을 크게 보면", cx, 20);
+  const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2);
+  const cropped = N > 16;                              // 조각이 너무 가늘면 윗부분을 확대해서 보여 줌
+  const ytop = H * 0.16;
+  const k = cropped ? 0.5 * W / (2 * s) : H * 0.78;     // 조각의 반지름이 화면에서 차지하는 길이
+  const ax = W / 2, ay = ytop + k;
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, k, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2); ctx.closePath();
+  ctx.fillStyle = "#cfeccb"; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(70,50,90,.6)"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ax, ay, k, -Math.PI / 2 - th / 2, -Math.PI / 2 + th / 2);
+  ctx.lineWidth = 4; ctx.strokeStyle = "#d6208a"; ctx.stroke();
+  if (cropped) {                                         // 아래쪽은 흐리게 해서 이어진다는 느낌을 줌
+    const g = ctx.createLinearGradient(0, H * 0.6, 0, H);
+    g.addColorStop(0, "rgba(251,249,255,0)"); g.addColorStop(1, "rgba(251,249,255,1)");
+    ctx.fillStyle = g; ctx.fillRect(0, H * 0.6, W, H * 0.4);
+  }
+  ctx.textAlign = "center"; ctx.font = "700 13px sans-serif"; ctx.fillStyle = "#5f3a9c";
+  ctx.fillText("한 조각 (" + N + "등분)" + (cropped ? " · 확대해서 본 모습" : ""), W / 2, 20);
 }
 function pieceInfo() {
   const N = S.n;
@@ -393,10 +364,10 @@ const presets = $("presets");
 [8, 16, 32, 64, 128].forEach(n => {
   const b = document.createElement("button");
   b.className = "ghost"; b.textContent = n + "등분"; b.dataset.n = n;
-  b.addEventListener("click", () => { S.n = n; sync(); updateInfo(); });
+  b.addEventListener("click", () => { S.n = n; sync(); });
   presets.appendChild(b);
 });
-$("nsl").addEventListener("input", e => { S.n = +e.target.value * 2; sync(); updateInfo(); });
+$("nsl").addEventListener("input", e => { S.n = +e.target.value * 2; sync(); });
 $("prog").addEventListener("input", e => { stop(); S.p = e.target.value / 100; sync(); });
 $("play").addEventListener("click", play);
 $("reset").addEventListener("click", () => { stop(); S.p = 0; sync(); });
@@ -407,7 +378,7 @@ $("save").addEventListener("click", () => {
 addEventListener("resize", draw);
 if (window.ResizeObserver) { new ResizeObserver(draw).observe(cv); new ResizeObserver(drawPiece).observe(cv2); }
 
-updateInfo(); sync();
+sync();
 </script>
 </body>
 </html>
