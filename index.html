@@ -83,7 +83,7 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
     <ol class="guide">
       <li>‘자르고 이어 붙이기’ 버튼을 누르거나 진행도 막대를 천천히 움직여 보세요.</li>
       <li>등분 수를 8 → 16 → 32 → 64로 바꾸면 이어 붙인 모양이 어떤 도형에 가까워지는지 관찰해 보세요.</li>
-      <li>직사각형의 가로·세로가 원의 무엇과 같은지 찾아 아래 식을 완성해 보세요.</li>
+      <li>등분 수가 많을 때는 화면이 확대되어 조각이 하나씩 맞춰지고, 마지막에 전체 모습이 보여요. 이어 붙인 모양의 가로·세로가 원의 무엇과 같은지 찾아 식을 완성해 보세요.</li>
     </ol>
   </div>
 
@@ -125,6 +125,13 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
       <div class="toggles">
         <label><input type="checkbox" id="tColor" checked> 위·아래 색으로 구분하기</label>
         <label><input type="checkbox" id="tHint"> 어림해 보기 (원 안·밖 정사각형)</label>
+        <label><input type="checkbox" id="tAuto" checked> 자동 확대·축소 (등분이 많을 때 조각을 확대해서 보여줘요)</label>
+      </div>
+      <div id="manual" hidden>
+        <label class="ctl" for="zoom">확대 <span class="val" id="zoomV">×1</span></label>
+        <input id="zoom" type="range" min="0" max="100" value="0">
+        <label class="ctl" for="pan">보는 위치 (왼쪽 ↔ 오른쪽)</label>
+        <input id="pan" type="range" min="0" max="100" value="0">
       </div>
     </aside>
   </div>
@@ -188,7 +195,7 @@ const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
 const fmt = x => String(Math.round(x * 1e4) / 1e4);
 const fmt2 = x => String(Math.round(x * 100) / 100);
 
-const S = { n: 16, r: 5, pi: "3.14", p: 0, hint: false, color: true, anim: null };
+const S = { n: 16, r: 5, pi: "3.14", p: 0, hint: false, color: true, anim: null, auto: true, zoom: 1, pan: 0 };
 const piVal = () => S.pi === "exact" ? Math.PI : parseFloat(S.pi);
 const piTxt = () => S.pi === "exact" ? "3.14159…" : S.pi;
 const num = x => S.pi === "exact" ? fmt2(x) : fmt(x);
@@ -196,6 +203,27 @@ const approxMark = () => S.pi === "exact" ? "≈ " : "= ";
 
 /* ---------- 그리기 ---------- */
 const cv = $("cv");
+function layout(W, H) {
+  const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2);
+  const R = Math.min(W / (Math.PI + 0.9), H / 3.1);
+  const CX = W / 2, CY = H / 2 - 10;
+  const X0 = W / 2 - (N - 1) * s * R / 2, Y0 = CY - R * c / 2;
+  const zAuto = clamp(W / (7 * s * R), 1, 16);        // 한 화면에 조각 약 7개가 보이는 배율
+  const d = clamp(5 / N, 0.06, 0.6);                    // 조각 하나가 움직이는 시간 비율
+  return { N, th, s, c, R, CX, CY, X0, Y0, zAuto, d };
+}
+function camera(L, W, H) {
+  const p = S.p, p1 = clamp((p - 0.06) / 0.74, 0, 1);
+  const def = { x: W / 2, y: L.CY };
+  const slotPt = q => ({ x: L.X0 + q * L.N * L.s * L.R, y: L.Y0 + L.R * 0.08 });   // 조각의 뾰족한 끝과 호가 맞물리는 높이
+  if (!S.auto) {                                         // 직접 조절
+    const z = S.zoom, w = clamp(z - 1, 0, 1), t = slotPt(S.pan);
+    return { z, x: def.x + (t.x - def.x) * w, y: def.y + (t.y - def.y) * w };
+  }
+  const wz = ease(clamp((p - 0.04) / 0.1, 0, 1)) * (1 - ease(clamp((p - 0.82) / 0.18, 0, 1)));
+  const ql = clamp((p1 - L.d) / (1 - L.d), 0, 1), t = slotPt(Math.min(1, (ql * (L.N - 1) + 2) / L.N));  // 방금 맞춰진 조각 바로 앞
+  return { z: 1 + (L.zAuto - 1) * wz, x: def.x + (t.x - def.x) * wz, y: def.y + (t.y - def.y) * wz };
+}
 function draw() {
   const ctx = cv.getContext("2d");
   const rect = cv.getBoundingClientRect();
@@ -208,85 +236,84 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2);
-  const R = Math.min(W / (Math.PI + 0.9), H / 3.1);
-  const CX = W / 2, CY = H / 2 - 10;
-  const p = S.p, p1 = clamp(p / 0.8, 0, 1), p2 = clamp((p - 0.8) / 0.2, 0, 1);
-  const X0 = W / 2 - (N - 2) * s * R / 2, Y0 = CY - R * c / 2;
-  const lw = N <= 32 ? 1 : N <= 64 ? 0.6 : 0.3;
+  const L = layout(W, H), { N, th, s, c, R, CX, CY, X0, Y0 } = L;
+  const cam = camera(L, W, H), z = cam.z;
+  ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - z * cam.x), dpr * (H / 2 - z * cam.y));
+  const p = S.p, p1 = clamp((p - 0.06) / 0.74, 0, 1);
+  const px = v => v / z;                                  // 화면 픽셀 기준 크기
+  const lw = px(z > 1.5 ? 1.3 : (N <= 32 ? 1 : N <= 64 ? 0.6 : 0.4));
   const colG = S.color ? "#cfeccb" : "#fbe0b0", colO = "#fbe0b0";
   const arcG = S.color ? "#d6208a" : "#7c4fc0", arcO = S.color ? "#1b9bd8" : "#7c4fc0";
 
-  function sector(ax, ay, b, a0, a1, fill, arcCol) {
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, R, b + a0, b + a1); ctx.closePath();
+  function sector(ax, ay, b, fill, arcCol) {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, R, b - th / 2, b + th / 2); ctx.closePath();
     ctx.fillStyle = fill; ctx.fill();
     ctx.lineWidth = lw; ctx.strokeStyle = "rgba(70,50,90,.55)"; ctx.stroke();
-    ctx.beginPath(); ctx.arc(ax, ay, R, b + a0, b + a1);
-    ctx.lineWidth = 2.4; ctx.strokeStyle = arcCol; ctx.stroke();
+    ctx.beginPath(); ctx.arc(ax, ay, R, b - th / 2, b + th / 2);
+    ctx.lineWidth = px(2.4); ctx.strokeStyle = arcCol; ctx.stroke();
   }
 
-  const lastSlot = N - 1;
-  let lastPose = null;
   for (let slot = 0; slot < N; slot++) {
     const green = slot % 2 === 1;
     const j = green ? (slot - 1) / 2 : N / 2 - 1 - slot / 2;   // 원래 반원 안에서의 순서
     const b0 = green ? -Math.PI + th / 2 + j * th : th / 2 + j * th;
     const bf = green ? -Math.PI / 2 : Math.PI / 2;
     const fx = X0 + slot * s * R, fy = Y0 + (green ? R * c : 0);
-    const e = ease(clamp(p1 * 1.5 - 0.5 * slot / (N - 1), 0, 1));
-    const ax = CX + (fx - CX) * e, ay = CY + (fy - CY) * e, b = b0 + (bf - b0) * e;
-    const fill = green ? colG : colO, arc = green ? arcG : arcO;
-    if (slot === lastSlot && p2 > 0) { lastPose = { ax, ay, b, fill, arc }; continue; }
-    sector(ax, ay, b, -th / 2, th / 2, fill, arc);
-  }
-  if (lastPose) {                       // 마지막 조각을 반으로 잘라 왼쪽 끝으로 옮기기
-    const q = lastPose, dx = -N * s * R * ease(p2);
-    sector(q.ax, q.ay, q.b, -th / 2, 0, q.fill, q.arc);
-    sector(q.ax + dx, q.ay, q.b, 0, th / 2, q.fill, q.arc);
+    const q = slot / (N - 1);
+    const e = ease(clamp((p1 - q * (1 - L.d)) / L.d, 0, 1));
+    sector(CX + (fx - CX) * e, CY + (fy - CY) * e, b0 + (bf - b0) * e,
+           green ? colG : colO, green ? arcG : arcO);
   }
 
   /* 어림하기: 원 안·밖 정사각형 */
-  const a0 = clamp(1 - p * 12, 0, 1);
+  const a0 = clamp(1 - p1 * 12, 0, 1);
   if (S.hint && a0 > 0) {
-    ctx.save(); ctx.globalAlpha = a0;
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "#e03a3a"; ctx.setLineDash([]);
-    ctx.strokeRect(CX - R, CY - R, 2 * R, 2 * R);
+    ctx.save(); ctx.globalAlpha = a0; ctx.lineWidth = px(2.5);
+    ctx.strokeStyle = "#e03a3a"; ctx.strokeRect(CX - R, CY - R, 2 * R, 2 * R);
     ctx.strokeStyle = "#1f9d55";
     ctx.beginPath(); ctx.moveTo(CX - R, CY); ctx.lineTo(CX, CY - R); ctx.lineTo(CX + R, CY); ctx.lineTo(CX, CY + R); ctx.closePath(); ctx.stroke();
     ctx.restore();
   }
 
   /* 반지름 표시 */
-  const a1 = clamp(1 - p * 8, 0, 1);
+  const a1 = clamp(1 - p1 * 8, 0, 1);
   if (a1 > 0) {
     ctx.save(); ctx.globalAlpha = a1;
-    ctx.strokeStyle = "#333"; ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "#333"; ctx.lineWidth = px(1.6);
     ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + R, CY); ctx.stroke();
-    ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(CX, CY, 3, 0, 7); ctx.fill();
-    ctx.font = "700 13px sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#fff"; ctx.fillRect(CX + R / 2 - 30, CY - 22, 60, 17);
-    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - 9);
+    ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(CX, CY, px(3), 0, 7); ctx.fill();
+    ctx.font = `700 ${px(13)}px sans-serif`; ctx.textAlign = "center";
+    ctx.fillStyle = "#fff"; ctx.fillRect(CX + R / 2 - px(30), CY - px(22), px(60), px(17));
+    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - px(9));
     ctx.restore();
   }
 
   /* 가로·세로 표시 */
-  const a2 = clamp((p - 0.9) / 0.1, 0, 1);
+  const a2 = clamp((p - 0.92) / 0.08, 0, 1);
   if (a2 > 0) {
     ctx.save(); ctx.globalAlpha = a2;
-    const xl = X0 - s * R, xr = X0 + (N - 1) * s * R, yb = Y0 + R + 12;
-    ctx.strokeStyle = "#5f3a9c"; ctx.fillStyle = "#5f3a9c"; ctx.lineWidth = 2;
+    const xl = X0 - s * R, xr = X0 + (N - 1) * s * R, yb = Y0 + R + px(12);
+    ctx.strokeStyle = "#5f3a9c"; ctx.fillStyle = "#5f3a9c"; ctx.lineWidth = px(2);
+    const t5 = px(5);
     ctx.beginPath(); ctx.moveTo(xl, yb); ctx.lineTo(xr, yb);
-    ctx.moveTo(xl, yb - 5); ctx.lineTo(xl, yb + 5); ctx.moveTo(xr, yb - 5); ctx.lineTo(xr, yb + 5); ctx.stroke();
-    ctx.font = "700 14px sans-serif"; ctx.textAlign = "center";
-    const half = piVal() * S.r;
-    ctx.fillText("가로 = 원주 × ½ = " + num(half) + " cm", (xl + xr) / 2, yb + 20);
-    const xv = xl - 12;
+    ctx.moveTo(xl, yb - t5); ctx.lineTo(xl, yb + t5); ctx.moveTo(xr, yb - t5); ctx.lineTo(xr, yb + t5); ctx.stroke();
+    ctx.font = `700 ${px(14)}px sans-serif`; ctx.textAlign = "center";
+    ctx.fillText("가로 ≈ 원주 × ½ = " + num(piVal() * S.r) + " cm", (xl + xr) / 2, yb + px(20));
+    const xv = xl - px(12);
     ctx.beginPath(); ctx.moveTo(xv, Y0); ctx.lineTo(xv, Y0 + R);
-    ctx.moveTo(xv - 5, Y0); ctx.lineTo(xv + 5, Y0); ctx.moveTo(xv - 5, Y0 + R); ctx.lineTo(xv + 5, Y0 + R); ctx.stroke();
-    ctx.save(); ctx.translate(xv - 8, Y0 + R / 2); ctx.rotate(-Math.PI / 2);
+    ctx.moveTo(xv - t5, Y0); ctx.lineTo(xv + t5, Y0); ctx.moveTo(xv - t5, Y0 + R); ctx.lineTo(xv + t5, Y0 + R); ctx.stroke();
+    ctx.save(); ctx.translate(xv - px(8), Y0 + R / 2); ctx.rotate(-Math.PI / 2);
     ctx.fillText("세로 = 반지름 = " + fmt(S.r) + " cm", 0, 0); ctx.restore();
     ctx.restore();
+  }
+
+  /* 확대 표시 (화면 좌표) */
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (z > 1.05) {
+    const t = "🔍 ×" + (z < 10 ? z.toFixed(1) : Math.round(z)) + " 확대 중";
+    ctx.font = "700 13px sans-serif"; const w = ctx.measureText(t).width + 18;
+    ctx.fillStyle = "rgba(95,58,156,.9)"; ctx.beginPath(); ctx.roundRect(10, 10, w, 26, 13); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.fillText(t, 19, 28);
   }
 }
 
@@ -308,8 +335,8 @@ function updateInfo() {
   const N = S.n, w = N * Math.sin(Math.PI / N), t = Math.PI;
   const diff = (1 - w / t) * 100;
   $("approx").innerHTML =
-    `현재 <b>${N}등분</b>: 이어 붙인 모양의 가로 길이는 원주의 ½보다 <b>${diff < 0.005 ? "거의 차이가 없어요" : fmt2(diff) + "% 짧아요"}</b>` +
-    ` (이어 붙인 길이 ${fmt2(w * r)} cm, 원주 × ½ = ${fmt2(t * r)} cm). 등분 수가 클수록 직사각형에 가까워집니다.`;
+    `현재 <b>${N}등분</b>: 이어 붙인 모양의 가로 길이(한쪽 변)는 원주의 ½보다 <b>${diff < 0.005 ? "거의 차이가 없어요" : fmt2(diff) + "% 짧아요"}</b>` +
+    ` (이어 붙인 길이 ${fmt2(w * r)} cm, 원주 × ½ = ${fmt2(t * r)} cm). 등분 수가 클수록 양 끝의 기울어짐이 줄어 직사각형에 가까워집니다.`;
 }
 
 function sync() {
@@ -326,10 +353,10 @@ function stop() { if (S.anim) { cancelAnimationFrame(S.anim); S.anim = null; } $
 function play() {
   if (S.anim) { stop(); return; }
   if (S.p >= 1) S.p = 0;
-  const from = S.p, dur = 4200 * (1 - from), t0 = performance.now();
+  const from = S.p, total = S.n > 16 ? 14000 : 5000, t0 = performance.now();
   $("play").textContent = "⏸ 멈추기";
   const step = now => {
-    S.p = clamp(from + (now - t0) / (4200), from, 1);
+    S.p = clamp(from + (now - t0) / total, from, 1);
     sync();
     if (S.p < 1) S.anim = requestAnimationFrame(step); else stop();
   };
@@ -357,6 +384,12 @@ $("save").addEventListener("click", () => {
   cv.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b);
     a.download = "원의넓이_" + S.n + "등분.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
 });
+function zoomFromSlider() { const mx = Math.max(8, layout(cv.getBoundingClientRect().width || 600, cv.getBoundingClientRect().height || 400).zAuto);
+  return Math.exp(Math.log(mx) * $("zoom").value / 100); }
+function manualSync() { S.zoom = zoomFromSlider(); S.pan = $("pan").value / 100;
+  $("zoomV").textContent = "×" + (S.zoom < 10 ? S.zoom.toFixed(1) : Math.round(S.zoom)); draw(); }
+$("zoom").addEventListener("input", manualSync); $("pan").addEventListener("input", manualSync);
+$("tAuto").addEventListener("change", e => { S.auto = e.target.checked; $("manual").hidden = S.auto; if (!S.auto) manualSync(); else draw(); });
 addEventListener("resize", draw);
 if (window.ResizeObserver) new ResizeObserver(draw).observe(cv);
 
