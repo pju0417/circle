@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>원을 잘라 직사각형 만들기</title>
+<meta name="description" content="초등 6학년 수학 5단원 '원의 넓이를 구하는 방법' 탐구 도구: 원을 등분해 이어 붙여 직사각형으로 만들어 보세요.">
+<style>
+:root{
+  --bg:#f5f1fb; --card:#fff; --ink:#2b2438; --sub:#6b6280; --line:#e4dcf2;
+  --main:#7c4fc0; --main-d:#5f3a9c; --main-l:#efe6fb;
+  --green:#cfeccb; --orange:#fbe0b0; --mag:#d6208a; --cyan:#1b9bd8;
+  --ok:#1b8a4b; --bad:#c43030;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:1040px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:14px;margin:4px 0 14px}
+.badge{flex:none;width:52px;height:52px;border-radius:16px;background:var(--main);color:#fff;
+  display:grid;place-items:center;font-weight:800;font-size:28px}
+h1{font-size:clamp(20px,4.5vw,28px);margin:0;line-height:1.25}
+header p{margin:2px 0 0;color:var(--sub);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px;
+  box-shadow:0 2px 8px rgba(80,50,140,.06)}
+h2{font-size:17px;margin:0 0 10px;color:var(--main-d)}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:900px){.grid{grid-template-columns:1.55fr 1fr}.grid .card{margin-bottom:0}}
+.stage canvas{display:block;width:100%;aspect-ratio:16/10;background:linear-gradient(#fbf9ff,#fff);
+  border-radius:12px;border:1px solid var(--line);touch-action:none}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+button,select,input[type=number]{font:inherit}
+button{border:0;border-radius:12px;padding:9px 14px;background:var(--main);color:#fff;font-weight:700;cursor:pointer;
+  min-height:40px}
+button:hover{background:var(--main-d)}
+button.ghost{background:var(--main-l);color:var(--main-d)}
+button.ghost:hover{background:#e3d3f8}
+button.on{background:var(--main-d);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ffb703;outline-offset:2px}
+label.ctl{display:block;font-weight:700;font-size:14px;margin:12px 0 4px}
+.val{color:var(--main-d)}
+input[type=range]{width:100%;accent-color:var(--main);height:28px}
+input[type=number],select{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink);min-height:40px}
+input[type=number]{width:100px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips button{padding:6px 12px;min-height:34px}
+.toggles{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.toggles label{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
+.toggles input{width:18px;height:18px;accent-color:var(--main)}
+.steps{font-size:15px}
+.steps .line{padding:7px 10px;border-radius:10px;background:var(--main-l);margin-bottom:6px}
+.steps .line.key{background:#fff3cf;border:1.5px solid #f0c24b;font-weight:700}
+.steps small{display:block;color:var(--sub);font-weight:400}
+.approx{font-size:13px;color:var(--sub);margin-top:8px}
+.approx b{color:var(--ink)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--sub);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:1px solid #0003}
+.quiz .q{padding:10px 0;border-top:1px dashed var(--line)}
+.quiz .q:first-of-type{border-top:0}
+.fb{margin-left:6px;font-weight:700}
+.fb.ok{color:var(--ok)} .fb.bad{color:var(--bad)}
+details{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-top:8px;background:#fcfaff}
+summary{cursor:pointer;font-weight:700}
+.sol{margin-top:8px;padding:8px 10px;border-radius:10px;background:#f1f9f1;font-size:14px}
+footer{color:var(--sub);font-size:12px;text-align:center;margin:18px 0 8px}
+ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge" aria-hidden="true">5</div>
+    <div>
+      <h1>원을 잘라 직사각형 만들기</h1>
+      <p>6학년 수학 5단원 · 원의 넓이를 구하는 방법을 알아볼까요</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>활동 순서</h2>
+    <ol class="guide">
+      <li>‘자르고 이어 붙이기’ 버튼을 누르거나 진행도 막대를 천천히 움직여 보세요.</li>
+      <li>등분 수를 8 → 16 → 32 → 64로 바꾸면 이어 붙인 모양이 어떤 도형에 가까워지는지 관찰해 보세요.</li>
+      <li>직사각형의 가로·세로가 원의 무엇과 같은지 찾아 아래 식을 완성해 보세요.</li>
+    </ol>
+  </div>
+
+  <div class="grid">
+    <section class="card stage" aria-label="시각화">
+      <canvas id="cv" role="img" aria-label="원을 등분해 이어 붙여 직사각형으로 만드는 그림"></canvas>
+      <div class="legend" id="legend">
+        <span><i style="background:var(--green)"></i>위쪽 반원 조각</span>
+        <span><i style="background:var(--orange)"></i>아래쪽 반원 조각</span>
+        <span><i style="background:var(--mag)"></i>원주의 위쪽 반</span>
+        <span><i style="background:var(--cyan)"></i>원주의 아래쪽 반</span>
+      </div>
+      <div class="row">
+        <button id="play">▶ 자르고 이어 붙이기</button>
+        <button id="reset" class="ghost">↺ 처음으로</button>
+        <button id="save" class="ghost">🖼 그림 저장</button>
+      </div>
+      <label class="ctl" for="prog">이어 붙이기 진행도 <span class="val" id="progV">0%</span></label>
+      <input id="prog" type="range" min="0" max="100" value="0" step="1">
+    </section>
+
+    <aside class="card" aria-label="설정">
+      <h2>설정</h2>
+      <label class="ctl" for="nsl">원을 몇 등분할까요? <span class="val" id="nV">16등분</span></label>
+      <input id="nsl" type="range" min="2" max="100" value="8" step="1">
+      <div class="chips" id="presets"></div>
+
+      <label class="ctl" for="rad">원의 반지름 (cm)</label>
+      <input id="rad" type="number" min="0.1" max="1000" step="0.5" value="5" inputmode="decimal">
+
+      <label class="ctl" for="pi">원주율</label>
+      <select id="pi">
+        <option value="3.14" selected>3.14 (교과서)</option>
+        <option value="3">3 (어림)</option>
+        <option value="3.1">3.1</option>
+        <option value="exact">3.14159265… (정확한 값)</option>
+      </select>
+
+      <div class="toggles">
+        <label><input type="checkbox" id="tColor" checked> 위·아래 색으로 구분하기</label>
+        <label><input type="checkbox" id="tHint"> 어림해 보기 (원 안·밖 정사각형)</label>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card" style="margin-top:14px" aria-live="polite">
+    <h2>식으로 정리하기</h2>
+    <div class="steps" id="steps"></div>
+    <div class="approx" id="approx"></div>
+  </section>
+
+  <section class="card quiz">
+    <h2>확인해 볼까요</h2>
+
+    <div class="q">
+      <b>① 직사각형의 가로</b>는 원의 무엇의 ½ 인가요?<br>
+      (가로) = (원의
+      <select id="q1"><option value="">선택</option><option>반지름</option><option>지름</option><option>원주</option><option>원주율</option></select>
+      ) × ½
+      <button class="ghost" data-chk="1">확인</button><span class="fb" id="f1"></span>
+    </div>
+    <div class="q">
+      <b>② 직사각형의 세로</b>는 원의 무엇과 같은가요?<br>
+      (세로) = (원의
+      <select id="q2"><option value="">선택</option><option>반지름</option><option>지름</option><option>원주</option><option>원주율</option></select>
+      )
+      <button class="ghost" data-chk="2">확인</button><span class="fb" id="f2"></span>
+    </div>
+    <div class="q">
+      <b>③ 식 완성하기</b><br>
+      (원의 넓이) = (반지름) ×
+      (<select id="q3a"><option value="">선택</option><option>반지름</option><option>지름</option><option>원주</option><option>원주율</option></select>)
+      ×
+      (<select id="q3b"><option value="">선택</option><option>반지름</option><option>지름</option><option>원주</option><option>원주율</option></select>)
+      <button class="ghost" data-chk="3">확인</button><span class="fb" id="f3"></span>
+    </div>
+    <div class="q">
+      <b>④ 문제 풀기</b> <span id="pbText"></span><br>
+      <input id="pbAns" type="number" step="any" inputmode="decimal" placeholder="답"> cm²
+      <button class="ghost" id="pbChk">확인</button>
+      <button class="ghost" id="pbShow">그림으로 보기</button>
+      <button class="ghost" id="pbNew">새 문제</button>
+      <span class="fb" id="pbFb"></span>
+      <div class="sol" id="pbSol" hidden></div>
+    </div>
+
+    <details>
+      <summary>생각해 볼까요: 원을 한없이 잘라 이어 붙이면?</summary>
+      <p style="margin:8px 0 0">등분 수를 계속 늘리면 이어 붙인 모양의 윗변과 아랫변이 점점 곧은 선에 가까워지고, 옆변은 거의 수직이 됩니다.
+      그래서 <b>직사각형</b>에 가까워져요. 이 직사각형의 넓이를 구하는 방법(가로×세로)을 이용해 원의 넓이를 구할 수 있습니다.</p>
+    </details>
+  </section>
+
+  <footer>수학 6-2 5단원 「원의 둘레와 넓이」 · 원의 넓이를 구하는 방법(교과서 108~109쪽) 활동을 돕는 학습 도구</footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+const fmt = x => String(Math.round(x * 1e4) / 1e4);
+const fmt2 = x => String(Math.round(x * 100) / 100);
+
+const S = { n: 16, r: 5, pi: "3.14", p: 0, hint: false, color: true, anim: null };
+const piVal = () => S.pi === "exact" ? Math.PI : parseFloat(S.pi);
+const piTxt = () => S.pi === "exact" ? "3.14159…" : S.pi;
+const num = x => S.pi === "exact" ? fmt2(x) : fmt(x);
+const approxMark = () => S.pi === "exact" ? "≈ " : "= ";
+
+/* ---------- 그리기 ---------- */
+const cv = $("cv");
+function draw() {
+  const ctx = cv.getContext("2d");
+  const rect = cv.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const W = rect.width, H = rect.height;
+  if (!W || !H) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2);
+  const R = Math.min(W / (Math.PI + 0.9), H / 3.1);
+  const CX = W / 2, CY = H / 2 - 10;
+  const p = S.p, p1 = clamp(p / 0.8, 0, 1), p2 = clamp((p - 0.8) / 0.2, 0, 1);
+  const X0 = W / 2 - (N - 2) * s * R / 2, Y0 = CY - R * c / 2;
+  const lw = N <= 32 ? 1 : N <= 64 ? 0.6 : 0.3;
+  const colG = S.color ? "#cfeccb" : "#fbe0b0", colO = "#fbe0b0";
+  const arcG = S.color ? "#d6208a" : "#7c4fc0", arcO = S.color ? "#1b9bd8" : "#7c4fc0";
+
+  function sector(ax, ay, b, a0, a1, fill, arcCol) {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, R, b + a0, b + a1); ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.lineWidth = lw; ctx.strokeStyle = "rgba(70,50,90,.55)"; ctx.stroke();
+    ctx.beginPath(); ctx.arc(ax, ay, R, b + a0, b + a1);
+    ctx.lineWidth = 2.4; ctx.strokeStyle = arcCol; ctx.stroke();
+  }
+
+  const lastSlot = N - 1;
+  let lastPose = null;
+  for (let slot = 0; slot < N; slot++) {
+    const green = slot % 2 === 1;
+    const j = green ? (slot - 1) / 2 : N / 2 - 1 - slot / 2;   // 원래 반원 안에서의 순서
+    const b0 = green ? -Math.PI + th / 2 + j * th : th / 2 + j * th;
+    const bf = green ? -Math.PI / 2 : Math.PI / 2;
+    const fx = X0 + slot * s * R, fy = Y0 + (green ? R * c : 0);
+    const e = ease(clamp(p1 * 1.5 - 0.5 * slot / (N - 1), 0, 1));
+    const ax = CX + (fx - CX) * e, ay = CY + (fy - CY) * e, b = b0 + (bf - b0) * e;
+    const fill = green ? colG : colO, arc = green ? arcG : arcO;
+    if (slot === lastSlot && p2 > 0) { lastPose = { ax, ay, b, fill, arc }; continue; }
+    sector(ax, ay, b, -th / 2, th / 2, fill, arc);
+  }
+  if (lastPose) {                       // 마지막 조각을 반으로 잘라 왼쪽 끝으로 옮기기
+    const q = lastPose, dx = -N * s * R * ease(p2);
+    sector(q.ax, q.ay, q.b, -th / 2, 0, q.fill, q.arc);
+    sector(q.ax + dx, q.ay, q.b, 0, th / 2, q.fill, q.arc);
+  }
+
+  /* 어림하기: 원 안·밖 정사각형 */
+  const a0 = clamp(1 - p * 12, 0, 1);
+  if (S.hint && a0 > 0) {
+    ctx.save(); ctx.globalAlpha = a0;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#e03a3a"; ctx.setLineDash([]);
+    ctx.strokeRect(CX - R, CY - R, 2 * R, 2 * R);
+    ctx.strokeStyle = "#1f9d55";
+    ctx.beginPath(); ctx.moveTo(CX - R, CY); ctx.lineTo(CX, CY - R); ctx.lineTo(CX + R, CY); ctx.lineTo(CX, CY + R); ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* 반지름 표시 */
+  const a1 = clamp(1 - p * 8, 0, 1);
+  if (a1 > 0) {
+    ctx.save(); ctx.globalAlpha = a1;
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + R, CY); ctx.stroke();
+    ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(CX, CY, 3, 0, 7); ctx.fill();
+    ctx.font = "700 13px sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "#fff"; ctx.fillRect(CX + R / 2 - 30, CY - 22, 60, 17);
+    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - 9);
+    ctx.restore();
+  }
+
+  /* 가로·세로 표시 */
+  const a2 = clamp((p - 0.9) / 0.1, 0, 1);
+  if (a2 > 0) {
+    ctx.save(); ctx.globalAlpha = a2;
+    const xl = X0 - s * R, xr = X0 + (N - 1) * s * R, yb = Y0 + R + 12;
+    ctx.strokeStyle = "#5f3a9c"; ctx.fillStyle = "#5f3a9c"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(xl, yb); ctx.lineTo(xr, yb);
+    ctx.moveTo(xl, yb - 5); ctx.lineTo(xl, yb + 5); ctx.moveTo(xr, yb - 5); ctx.lineTo(xr, yb + 5); ctx.stroke();
+    ctx.font = "700 14px sans-serif"; ctx.textAlign = "center";
+    const half = piVal() * S.r;
+    ctx.fillText("가로 = 원주 × ½ = " + num(half) + " cm", (xl + xr) / 2, yb + 20);
+    const xv = xl - 12;
+    ctx.beginPath(); ctx.moveTo(xv, Y0); ctx.lineTo(xv, Y0 + R);
+    ctx.moveTo(xv - 5, Y0); ctx.lineTo(xv + 5, Y0); ctx.moveTo(xv - 5, Y0 + R); ctx.lineTo(xv + 5, Y0 + R); ctx.stroke();
+    ctx.save(); ctx.translate(xv - 8, Y0 + R / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText("세로 = 반지름 = " + fmt(S.r) + " cm", 0, 0); ctx.restore();
+    ctx.restore();
+  }
+}
+
+/* ---------- 설명·식 ---------- */
+function updateInfo() {
+  const r = S.r, pi = piVal(), d = 2 * r;
+  const C = d * pi, half = C / 2, area = r * r * pi;
+  const m = approxMark();
+  $("steps").innerHTML =
+    `<div class="line">지름 = 반지름 × 2 = ${fmt(r)} × 2 = <b>${fmt(d)} cm</b></div>
+     <div class="line">원주 = 지름 × 원주율 = ${fmt(d)} × ${piTxt()} ${m}<b>${num(C)} cm</b></div>
+     <div class="line">직사각형의 가로 = 원주 × ½ ${m}<b>${num(half)} cm</b>
+       <small>(= 지름 × 원주율 × ½ = 반지름 × 원주율)</small></div>
+     <div class="line">직사각형의 세로 = 반지름 = <b>${fmt(r)} cm</b></div>
+     <div class="line key">원의 넓이 = 가로 × 세로 = ${num(half)} × ${fmt(r)} ${m}${num(area)} cm²
+       <small>= (반지름) × (반지름) × (원주율) = ${fmt(r)} × ${fmt(r)} × ${piTxt()}</small></div>` +
+    (S.hint ? `<div class="line">어림: 원 안 정사각형 ${fmt(2*r*r)} cm² &lt; 원의 넓이 &lt; 원 밖 정사각형 ${fmt(4*r*r)} cm²
+       <small>(안: 반지름×반지름×2, 밖: 반지름×반지름×4)</small></div>` : "");
+  const N = S.n, w = N * Math.sin(Math.PI / N), t = Math.PI;
+  const diff = (1 - w / t) * 100;
+  $("approx").innerHTML =
+    `현재 <b>${N}등분</b>: 이어 붙인 모양의 가로 길이는 원주의 ½보다 <b>${diff < 0.005 ? "거의 차이가 없어요" : fmt2(diff) + "% 짧아요"}</b>` +
+    ` (이어 붙인 길이 ${fmt2(w * r)} cm, 원주 × ½ = ${fmt2(t * r)} cm). 등분 수가 클수록 직사각형에 가까워집니다.`;
+}
+
+function sync() {
+  $("nV").textContent = S.n + "등분";
+  $("progV").textContent = Math.round(S.p * 100) + "%";
+  $("prog").value = Math.round(S.p * 100);
+  $("nsl").value = S.n / 2;
+  document.querySelectorAll("#presets button").forEach(b => b.classList.toggle("on", +b.dataset.n === S.n));
+  draw();
+}
+
+/* ---------- 애니메이션 ---------- */
+function stop() { if (S.anim) { cancelAnimationFrame(S.anim); S.anim = null; } $("play").textContent = "▶ 자르고 이어 붙이기"; }
+function play() {
+  if (S.anim) { stop(); return; }
+  if (S.p >= 1) S.p = 0;
+  const from = S.p, dur = 4200 * (1 - from), t0 = performance.now();
+  $("play").textContent = "⏸ 멈추기";
+  const step = now => {
+    S.p = clamp(from + (now - t0) / (4200), from, 1);
+    sync();
+    if (S.p < 1) S.anim = requestAnimationFrame(step); else stop();
+  };
+  S.anim = requestAnimationFrame(step);
+}
+
+/* ---------- 이벤트 ---------- */
+const presets = $("presets");
+[8, 16, 32, 64, 128].forEach(n => {
+  const b = document.createElement("button");
+  b.className = "ghost"; b.textContent = n + "등분"; b.dataset.n = n;
+  b.addEventListener("click", () => { S.n = n; sync(); updateInfo(); });
+  presets.appendChild(b);
+});
+$("nsl").addEventListener("input", e => { S.n = +e.target.value * 2; sync(); updateInfo(); });
+$("prog").addEventListener("input", e => { stop(); S.p = e.target.value / 100; sync(); });
+$("play").addEventListener("click", play);
+$("reset").addEventListener("click", () => { stop(); S.p = 0; sync(); });
+$("rad").addEventListener("input", e => { const v = parseFloat(e.target.value); if (v > 0) { S.r = v; updateInfo(); draw(); } });
+$("pi").addEventListener("change", e => { S.pi = e.target.value; updateInfo(); draw(); });
+$("tColor").addEventListener("change", e => { S.color = e.target.checked;
+  $("legend").style.display = S.color ? "" : "none"; draw(); });
+$("tHint").addEventListener("change", e => { S.hint = e.target.checked; if (S.hint) { stop(); S.p = 0; sync(); } updateInfo(); draw(); });
+$("save").addEventListener("click", () => {
+  cv.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b);
+    a.download = "원의넓이_" + S.n + "등분.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
+});
+addEventListener("resize", draw);
+if (window.ResizeObserver) new ResizeObserver(draw).observe(cv);
+
+/* ---------- 퀴즈 ---------- */
+function fb(id, ok, msgOk, msgBad) {
+  const e = $(id); e.className = "fb " + (ok ? "ok" : "bad"); e.textContent = ok ? msgOk : msgBad;
+}
+document.querySelectorAll("[data-chk]").forEach(btn => btn.addEventListener("click", () => {
+  const k = btn.dataset.chk;
+  if (k === "1") { const v = $("q1").value; fb("f1", v === "원주", "⭕ 맞아요! 원주의 ½이에요.", v ? "❌ 다시 생각해 봐요. 윗변의 길이가 무엇이었나요?" : "선택해 주세요."); }
+  if (k === "2") { const v = $("q2").value; fb("f2", v === "반지름", "⭕ 맞아요! 조각의 길이가 반지름이에요.", v ? "❌ 조각 하나의 길이(중심에서 원 위의 점까지)를 떠올려 봐요." : "선택해 주세요."); }
+  if (k === "3") {
+    const a = $("q3a").value, b = $("q3b").value, set = [a, b].sort().join();
+    fb("f3", set === ["반지름", "원주율"].sort().join(), "⭕ 완성! (원의 넓이) = (반지름) × (반지름) × (원주율)",
+       a && b ? "❌ 힌트: 반지름 × 원주 × ½ 에서 원주 = 지름 × 원주율 = 반지름 × 2 × 원주율" : "두 칸을 모두 선택해 주세요.");
+  }
+}));
+
+let prob = null;
+function newProb() {
+  const useD = Math.random() < 0.5;
+  const rs = [3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25];
+  const r = rs[Math.floor(Math.random() * rs.length)];
+  prob = { r, useD, ans: r * r * 3.14 };
+  $("pbText").textContent = `${useD ? "지름" : "반지름"}이 ${useD ? 2 * r : r} cm인 원의 넓이는 몇 cm²일까요? (원주율 3.14)`;
+  $("pbAns").value = ""; $("pbFb").textContent = ""; $("pbSol").hidden = true;
+}
+$("pbNew").addEventListener("click", newProb);
+$("pbChk").addEventListener("click", () => {
+  const v = parseFloat($("pbAns").value);
+  if (isNaN(v)) return fb("pbFb", false, "", "답을 입력해 주세요.");
+  const ok = Math.abs(v - prob.ans) < 0.005;
+  fb("pbFb", ok, "⭕ 정답이에요!", "❌ 다시 풀어 봐요.");
+  const sol = $("pbSol");
+  sol.hidden = ok;
+  if (!ok) sol.innerHTML = `풀이: ${prob.useD ? `반지름 = ${2*prob.r} ÷ 2 = ${prob.r} cm<br>` : ""}넓이 = ${prob.r} × ${prob.r} × 3.14 = <b>${fmt(prob.ans)} cm²</b>`;
+});
+$("pbShow").addEventListener("click", () => {
+  S.r = prob.r; $("rad").value = prob.r; S.pi = "3.14"; $("pi").value = "3.14";
+  stop(); S.p = 0; sync(); updateInfo();
+  $("cv").scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
+newProb(); updateInfo(); sync();
+</script>
+</body>
+</html>
