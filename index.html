@@ -27,7 +27,7 @@ header p{margin:2px 0 0;color:var(--sub);font-size:14px}
 h2{font-size:17px;margin:0 0 10px;color:var(--main-d)}
 .grid{display:grid;gap:14px;grid-template-columns:1fr}
 @media(min-width:900px){.grid{grid-template-columns:1.55fr 1fr}.grid .card{margin-bottom:0}}
-.stage canvas{display:block;width:100%;aspect-ratio:16/10;background:linear-gradient(#fbf9ff,#fff);
+.stage canvas{display:block;width:100%;aspect-ratio:4/3;background:linear-gradient(#fbf9ff,#fff);
   border-radius:12px;border:1px solid var(--line);touch-action:none}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
 button,select,input[type=number]{font:inherit}
@@ -83,7 +83,7 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
     <ol class="guide">
       <li>‘자르고 이어 붙이기’ 버튼을 누르거나 진행도 막대를 천천히 움직여 보세요.</li>
       <li>등분 수를 8 → 16 → 32 → 64로 바꾸면 이어 붙인 모양이 어떤 도형에 가까워지는지 관찰해 보세요.</li>
-      <li>등분 수가 많을 때는 오른쪽 위에 돋보기 창이 나타나 조각이 하나씩 맞물리는 모습을 확대해서 보여 줘요. 이어 붙인 모양의 가로·세로가 원의 무엇과 같은지 찾아 식을 완성해 보세요.</li>
+      <li>등분 수가 많을 때는 조각이 하나씩 붙는 자리를 확대해서 보여 주고, 다 붙으면 다시 축소해서 전체를 보여 줘요. 이어 붙인 모양의 가로·세로가 원의 무엇과 같은지 찾아 식을 완성해 보세요.</li>
     </ol>
   </div>
 
@@ -125,12 +125,12 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
       <div class="toggles">
         <label><input type="checkbox" id="tColor" checked> 위·아래 색으로 구분하기</label>
         <label><input type="checkbox" id="tHint"> 어림해 보기 (원 안·밖 정사각형)</label>
-        <label><input type="checkbox" id="tAuto" checked> 돋보기 자동으로 따라가기 (등분이 많을 때 맞물리는 부분을 확대해서 보여줘요)</label>
+        <label><input type="checkbox" id="tAuto" checked> 자동 확대·축소 (등분이 많을 때 조각이 붙는 자리를 확대해서 보여줘요)</label>
       </div>
       <div id="manual" hidden>
-        <label class="ctl" for="zoom">돋보기 배율 <span class="val" id="zoomV">×1</span></label>
-        <input id="zoom" type="range" min="0" max="100" value="50">
-        <label class="ctl" for="pan">돋보기 위치 (왼쪽 ↔ 오른쪽)</label>
+        <label class="ctl" for="zoom">확대 배율 <span class="val" id="zoomV">×1</span></label>
+        <input id="zoom" type="range" min="0" max="100" value="0">
+        <label class="ctl" for="pan">보는 위치 (왼쪽 ↔ 오른쪽)</label>
         <input id="pan" type="range" min="0" max="100" value="50">
       </div>
     </aside>
@@ -195,100 +195,38 @@ const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
 const fmt = x => String(Math.round(x * 1e4) / 1e4);
 const fmt2 = x => String(Math.round(x * 100) / 100);
 
-const S = { n: 16, r: 5, pi: "3.14", p: 0, hint: false, color: true, anim: null, auto: true, zoom: 6.9, pan: 0.5 };
+const S = { n: 16, r: 5, pi: "3.14", p: 0, hint: false, color: true, anim: null, auto: true, zoom: 1, pan: 0.5 };
 const piVal = () => S.pi === "exact" ? Math.PI : parseFloat(S.pi);
 const piTxt = () => S.pi === "exact" ? "3.14159…" : S.pi;
 const num = x => S.pi === "exact" ? fmt2(x) : fmt(x);
 const approxMark = () => S.pi === "exact" ? "≈ " : "= ";
 
 /* ---------- 그리기 ---------- */
+/* 구성: 위쪽에 직사각형(이어 붙인 모양)이 만들어지고, 아래쪽 원에서 조각이 하나씩 올라와 붙는다. */
 const cv = $("cv");
 function layout(W, H) {
   const N = S.n, th = 2 * Math.PI / N, s = Math.sin(th / 2), c = Math.cos(th / 2);
-  const R = Math.min(W / (Math.PI + 0.9), H / 3.1);
-  const CX = W / 2, CY = H / 2 - 10;
-  const X0 = W / 2 - (N - 1) * s * R / 2, Y0 = CY - R * c / 2;
-  const d = clamp(8 / N, 0.08, 0.6);                    // 조각 하나가 움직이는 시간 비율
-  const lens = { w: Math.min(W * 0.38, 300), h: Math.min(H * 0.27, 150), x: 0, y: 8 };
-  lens.x = W - lens.w - 8;
-  return { N, th, s, c, R, CX, CY, X0, Y0, d, lens };
+  const TOP = 46, GAP = 0.2;
+  const R = Math.max(10, Math.min(W / (Math.PI + 0.7), (H - TOP - 10) / (3 + GAP - (1 - c))));
+  const Y0 = TOP + R * (1 - c);                 // 주황 조각의 뾰족한 끝(윗줄) 높이
+  const CX = W / 2, CY = Y0 + R + GAP * R + R;  // 원의 중심
+  const X0 = W / 2 - (N - 1) * s * R / 2;
+  const d = clamp(8 / N, 0.08, 0.6);            // 조각 하나가 움직이는 시간 비율
+  const zAuto = N <= 16 ? 1 : clamp(W / (8 * s * R), 1, 8);   // 한 화면에 조각 약 8개가 보이는 배율
+  return { N, th, s, c, R, CX, CY, X0, Y0, d, zAuto, TOP };
 }
-const slotPt = (L, q) => ({ x: L.X0 + q * L.N * L.s * L.R, y: L.Y0 + L.R * 0.08 });  // 뾰족한 끝과 호가 맞물리는 높이
-function lensState(L, p) {
-  const p1 = clamp((p - 0.06) / 0.74, 0, 1);
-  if (S.auto) {
-    if (L.N <= 16) return null;
-    const a = clamp((p - 0.05) / 0.04, 0, 1) * (1 - clamp((p - 0.82) / 0.1, 0, 1));
-    if (a <= 0) return null;
-    const ql = clamp((p1 - L.d) / (1 - L.d), 0, 1);
-    return { a, z: clamp(L.lens.w / (7 * L.s * L.R), 2, 30), f: slotPt(L, Math.min(1, (ql * (L.N - 1) + 3) / L.N)) };
-  }
-  return { a: 1, z: S.zoom, f: slotPt(L, S.pan) };
-}
-
-/* z: 현재 배율(선 굵기·글자 크기를 화면 픽셀 기준으로 맞춤), full: 안내선·글자까지 그릴지 */
-function drawWorld(ctx, L, z, full) {
-  const { N, th, s, c, R, CX, CY, X0, Y0 } = L;
+function camera(L, W, H) {
   const p = S.p, p1 = clamp((p - 0.06) / 0.74, 0, 1);
-  const px = v => v / z;
-  const lw = px(z > 1.5 ? 1.3 : (N <= 32 ? 1 : N <= 64 ? 0.6 : 0.4));
-  const colG = S.color ? "#cfeccb" : "#fbe0b0", colO = "#fbe0b0";
-  const arcG = S.color ? "#d6208a" : "#7c4fc0", arcO = S.color ? "#1b9bd8" : "#7c4fc0";
-
-  for (let slot = 0; slot < N; slot++) {
-    const green = slot % 2 === 1;
-    const j = green ? (slot - 1) / 2 : N / 2 - 1 - slot / 2;   // 원래 반원 안에서의 순서
-    const b0 = green ? -Math.PI + th / 2 + j * th : th / 2 + j * th;
-    const bf = green ? -Math.PI / 2 : Math.PI / 2;
-    const fx = X0 + slot * s * R, fy = Y0 + (green ? R * c : 0);
-    const e = ease(clamp((p1 - slot / (N - 1) * (1 - L.d)) / L.d, 0, 1));
-    const ax = CX + (fx - CX) * e, ay = CY + (fy - CY) * e, b = b0 + (bf - b0) * e;
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, R, b - th / 2, b + th / 2); ctx.closePath();
-    ctx.fillStyle = green ? colG : colO; ctx.fill();
-    ctx.lineWidth = lw; ctx.strokeStyle = "rgba(70,50,90,.55)"; ctx.stroke();
-    ctx.beginPath(); ctx.arc(ax, ay, R, b - th / 2, b + th / 2);
-    ctx.lineWidth = px(full ? 2.4 : 2.2); ctx.strokeStyle = green ? arcG : arcO; ctx.stroke();
+  const def = { x: W / 2, y: H / 2 };
+  const pt = q => ({ x: L.X0 + q * L.N * L.s * L.R, y: L.Y0 + L.R * 0.85 });   // 조각이 올라와 붙는 자리
+  if (!S.auto) {
+    const w = clamp(S.zoom - 1, 0, 1), t = pt(S.pan);
+    return { z: S.zoom, x: def.x + (t.x - def.x) * w, y: def.y + (t.y - def.y) * w };
   }
-  if (!full) return;
-
-  /* 어림하기: 원 안·밖 정사각형 */
-  const a0 = clamp(1 - p1 * 12, 0, 1);
-  if (S.hint && a0 > 0) {
-    ctx.save(); ctx.globalAlpha = a0; ctx.lineWidth = 2.5;
-    ctx.strokeStyle = "#e03a3a"; ctx.strokeRect(CX - R, CY - R, 2 * R, 2 * R);
-    ctx.strokeStyle = "#1f9d55";
-    ctx.beginPath(); ctx.moveTo(CX - R, CY); ctx.lineTo(CX, CY - R); ctx.lineTo(CX + R, CY); ctx.lineTo(CX, CY + R); ctx.closePath(); ctx.stroke();
-    ctx.restore();
-  }
-  /* 반지름 표시 */
-  const a1 = clamp(1 - p1 * 8, 0, 1);
-  if (a1 > 0) {
-    ctx.save(); ctx.globalAlpha = a1;
-    ctx.strokeStyle = "#333"; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + R, CY); ctx.stroke();
-    ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(CX, CY, 3, 0, 7); ctx.fill();
-    ctx.font = "700 13px sans-serif"; ctx.textAlign = "center";
-    ctx.fillStyle = "#fff"; ctx.fillRect(CX + R / 2 - 30, CY - 22, 60, 17);
-    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - 9);
-    ctx.restore();
-  }
-  /* 가로·세로 표시 */
-  const a2 = clamp((p - 0.92) / 0.08, 0, 1);
-  if (a2 > 0) {
-    ctx.save(); ctx.globalAlpha = a2;
-    const xl = X0 - s * R, xr = X0 + (N - 1) * s * R, yb = Y0 + R + 12;
-    ctx.strokeStyle = "#5f3a9c"; ctx.fillStyle = "#5f3a9c"; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(xl, yb); ctx.lineTo(xr, yb);
-    ctx.moveTo(xl, yb - 5); ctx.lineTo(xl, yb + 5); ctx.moveTo(xr, yb - 5); ctx.lineTo(xr, yb + 5); ctx.stroke();
-    ctx.font = "700 14px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("가로 ≈ 원주 × ½ = " + num(piVal() * S.r) + " cm", (xl + xr) / 2, yb + 20);
-    const xv = xl - 12;
-    ctx.beginPath(); ctx.moveTo(xv, Y0); ctx.lineTo(xv, Y0 + R);
-    ctx.moveTo(xv - 5, Y0); ctx.lineTo(xv + 5, Y0); ctx.moveTo(xv - 5, Y0 + R); ctx.lineTo(xv + 5, Y0 + R); ctx.stroke();
-    ctx.save(); ctx.translate(xv - 8, Y0 + R / 2); ctx.rotate(-Math.PI / 2);
-    ctx.fillText("세로 = 반지름 = " + fmt(S.r) + " cm", 0, 0); ctx.restore();
-    ctx.restore();
-  }
+  const wz = ease(clamp((p - 0.04) / 0.1, 0, 1)) * (1 - ease(clamp((p - 0.84) / 0.16, 0, 1)));
+  const ql = clamp((p1 - L.d) / (1 - L.d), 0, 1);
+  const t = pt(Math.min(1, (ql * (L.N - 1) + 2) / L.N));     // 방금 붙은 조각 바로 앞
+  return { z: 1 + (L.zAuto - 1) * wz, x: def.x + (t.x - def.x) * wz, y: def.y + (t.y - def.y) * wz };
 }
 
 function draw() {
@@ -302,30 +240,89 @@ function draw() {
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  const L = layout(W, H);
-  drawWorld(ctx, L, 1, true);
 
-  /* 돋보기 창 */
-  const ls = lensState(L, S.p);
-  if (!ls) return;
-  const { x, y, w, h } = L.lens, vw = w / ls.z, vh = h / ls.z;
-  ctx.save(); ctx.globalAlpha = ls.a;
-  // 큰 그림에서 확대해서 보는 부분 표시
-  ctx.strokeStyle = "#5f3a9c"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
-  ctx.strokeRect(ls.f.x - vw / 2, ls.f.y - vh / 2, vw, vh); ctx.setLineDash([]);
-  // 창 안: 같은 장면을 확대해서 다시 그림
-  ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fillStyle = "#fff"; ctx.fill();
-  ctx.save(); ctx.clip();
-  ctx.setTransform(dpr * ls.z, 0, 0, dpr * ls.z, dpr * (x + w / 2 - ls.z * ls.f.x), dpr * (y + h / 2 - ls.z * ls.f.y));
-  drawWorld(ctx, L, ls.z, false);
+  const L = layout(W, H), { N, th, s, c, R, CX, CY, X0, Y0 } = L;
+  const cam = camera(L, W, H), z = cam.z;
+  ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - z * cam.x), dpr * (H / 2 - z * cam.y));
+  const p = S.p, p1 = clamp((p - 0.06) / 0.74, 0, 1);
+  const px = v => v / z;                                  // 화면 픽셀 기준 크기
+  const lw = px(z > 1.5 ? 1.3 : (N <= 32 ? 1 : N <= 64 ? 0.6 : 0.4));
+  const colG = S.color ? "#cfeccb" : "#fbe0b0", colO = "#fbe0b0";
+  const arcG = S.color ? "#d6208a" : "#7c4fc0", arcO = S.color ? "#1b9bd8" : "#7c4fc0";
+
+  /* 원의 자리(점선)와 반지름: 조각이 떠난 뒤에도 남겨서 크기를 비교할 수 있게 함 */
+  ctx.save();
+  ctx.setLineDash([px(5), px(4)]); ctx.lineWidth = px(1.4); ctx.strokeStyle = "rgba(95,58,156,.4)";
+  ctx.beginPath(); ctx.arc(CX, CY, R, 0, 7); ctx.stroke(); ctx.setLineDash([]);
   ctx.restore();
+
+  for (let slot = 0; slot < N; slot++) {
+    const green = slot % 2 === 1;
+    const j = green ? (slot - 1) / 2 : N / 2 - 1 - slot / 2;   // 원래 반원 안에서의 순서
+    const b0 = green ? -Math.PI + th / 2 + j * th : th / 2 + j * th;
+    const bf = green ? -Math.PI / 2 : Math.PI / 2;
+    const fx = X0 + slot * s * R, fy = Y0 + (green ? R * c : 0);
+    const e = ease(clamp((p1 - slot / (N - 1) * (1 - L.d)) / L.d, 0, 1));
+    const ax = CX + (fx - CX) * e, ay = CY + (fy - CY) * e, b = b0 + (bf - b0) * e;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.arc(ax, ay, R, b - th / 2, b + th / 2); ctx.closePath();
+    ctx.fillStyle = green ? colG : colO; ctx.fill();
+    ctx.lineWidth = lw; ctx.strokeStyle = "rgba(70,50,90,.55)"; ctx.stroke();
+    ctx.beginPath(); ctx.arc(ax, ay, R, b - th / 2, b + th / 2);
+    ctx.lineWidth = px(2.4); ctx.strokeStyle = green ? arcG : arcO; ctx.stroke();
+  }
+
+  /* 어림하기: 원 안·밖 정사각형 */
+  const a0 = clamp(1 - p1 * 12, 0, 1);
+  if (S.hint && a0 > 0) {
+    ctx.save(); ctx.globalAlpha = a0; ctx.lineWidth = px(2.5);
+    ctx.strokeStyle = "#e03a3a"; ctx.strokeRect(CX - R, CY - R, 2 * R, 2 * R);
+    ctx.strokeStyle = "#1f9d55";
+    ctx.beginPath(); ctx.moveTo(CX - R, CY); ctx.lineTo(CX, CY - R); ctx.lineTo(CX + R, CY); ctx.lineTo(CX, CY + R); ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  }
+  /* 반지름 표시 (처음에만) */
+  const a1 = clamp(1 - p1 * 8, 0, 1);
+  if (a1 > 0) {
+    ctx.save(); ctx.globalAlpha = a1;
+    ctx.strokeStyle = "#333"; ctx.lineWidth = px(1.6);
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + R, CY); ctx.stroke();
+    ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(CX, CY, px(3), 0, 7); ctx.fill();
+    ctx.font = `700 ${px(13)}px sans-serif`; ctx.textAlign = "center";
+    ctx.fillStyle = "#fff"; ctx.fillRect(CX + R / 2 - px(30), CY - px(22), px(60), px(17));
+    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - px(9));
+    ctx.restore();
+  }
+  /* 가로·세로 표시 (다 붙은 뒤) */
+  const a2 = clamp((p - 0.92) / 0.08, 0, 1);
+  if (a2 > 0) {
+    ctx.save(); ctx.globalAlpha = a2;
+    const xl = X0 - s * R, xr = X0 + (N - 1) * s * R, yt = Y0 - R * (1 - c) - px(12);
+    ctx.strokeStyle = "#5f3a9c"; ctx.fillStyle = "#5f3a9c"; ctx.lineWidth = px(2);
+    const t5 = px(5);
+    ctx.beginPath(); ctx.moveTo(xl, yt); ctx.lineTo(xr, yt);
+    ctx.moveTo(xl, yt - t5); ctx.lineTo(xl, yt + t5); ctx.moveTo(xr, yt - t5); ctx.lineTo(xr, yt + t5); ctx.stroke();
+    ctx.font = `700 ${px(14)}px sans-serif`; ctx.textAlign = "center";
+    ctx.fillText("가로 ≈ 원주 × ½ = " + num(piVal() * S.r) + " cm", (xl + xr) / 2, yt - px(8));
+    const xv = xl - px(12);
+    ctx.beginPath(); ctx.moveTo(xv, Y0); ctx.lineTo(xv, Y0 + R);
+    ctx.moveTo(xv - t5, Y0); ctx.lineTo(xv + t5, Y0); ctx.moveTo(xv - t5, Y0 + R); ctx.lineTo(xv + t5, Y0 + R); ctx.stroke();
+    ctx.save(); ctx.translate(xv - px(8), Y0 + R / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText("세로 = 반지름 = " + fmt(S.r) + " cm", 0, 0); ctx.restore();
+    // 점선 원의 반지름도 함께 보여 줌
+    ctx.setLineDash([px(4), px(3)]); ctx.lineWidth = px(1.6);
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + R, CY); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - px(8));
+    ctx.restore();
+  }
+
+  /* 확대 표시 (화면 좌표) */
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.lineWidth = 3; ctx.strokeStyle = "#5f3a9c"; ctx.stroke();
-  ctx.font = "700 12px sans-serif"; const t = "🔍 ×" + (ls.z < 10 ? ls.z.toFixed(1) : Math.round(ls.z)) + " 돋보기";
-  const tw = ctx.measureText(t).width + 14;
-  ctx.fillStyle = "#5f3a9c"; ctx.beginPath(); ctx.roundRect(x + 8, y + 8, tw, 22, 11); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.fillText(t, x + 15, y + 23);
-  ctx.restore();
+  if (z > 1.05) {
+    const t = "🔍 ×" + (z < 10 ? z.toFixed(1) : Math.round(z)) + " 확대 중";
+    ctx.font = "700 13px sans-serif"; const w = ctx.measureText(t).width + 18;
+    ctx.fillStyle = "rgba(95,58,156,.9)"; ctx.beginPath(); ctx.roundRect(10, 10, w, 26, 13); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.fillText(t, 19, 28);
+  }
 }
 
 /* ---------- 설명·식 ---------- */
@@ -395,7 +392,7 @@ $("save").addEventListener("click", () => {
   cv.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b);
     a.download = "원의넓이_" + S.n + "등분.png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
 });
-function manualSync() { S.zoom = 2 * Math.pow(12, $("zoom").value / 100); S.pan = $("pan").value / 100;
+function manualSync() { S.zoom = Math.pow(16, $("zoom").value / 100); S.pan = $("pan").value / 100;
   $("zoomV").textContent = "×" + (S.zoom < 10 ? S.zoom.toFixed(1) : Math.round(S.zoom)); draw(); }
 $("zoom").addEventListener("input", manualSync); $("pan").addEventListener("input", manualSync);
 $("tAuto").addEventListener("change", e => { S.auto = e.target.checked; $("manual").hidden = S.auto; manualSync(); });
