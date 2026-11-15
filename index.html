@@ -10,7 +10,6 @@
   --bg:#f5f1fb; --card:#fff; --ink:#2b2438; --sub:#6b6280; --line:#e4dcf2;
   --main:#7c4fc0; --main-d:#5f3a9c; --main-l:#efe6fb;
   --green:#cfeccb; --orange:#fbe0b0; --mag:#d6208a; --cyan:#1b9bd8;
-  --ok:#1b8a4b; --bad:#c43030;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -30,52 +29,24 @@ h2{font-size:17px;margin:0 0 10px;color:var(--main-d)}
 .stage canvas{display:block;width:100%;aspect-ratio:4/3;background:linear-gradient(#fbf9ff,#fff);
   border-radius:12px;border:1px solid var(--line);touch-action:none}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
-button,select,input[type=number]{font:inherit}
+button{font:inherit}
 button{border:0;border-radius:12px;padding:9px 14px;background:var(--main);color:#fff;font-weight:700;cursor:pointer;
   min-height:40px}
 button:hover{background:var(--main-d)}
 button.ghost{background:var(--main-l);color:var(--main-d)}
 button.ghost:hover{background:#e3d3f8}
 button.on{background:var(--main-d);color:#fff}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ffb703;outline-offset:2px}
+button:focus-visible,input:focus-visible{outline:3px solid #ffb703;outline-offset:2px}
 label.ctl{display:block;font-weight:700;font-size:14px;margin:12px 0 4px}
 .val{color:var(--main-d)}
 input[type=range]{width:100%;accent-color:var(--main);height:28px}
-input[type=number],select{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;color:var(--ink);min-height:40px}
-input[type=number]{width:100px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chips button{padding:6px 12px;min-height:34px}
-.toggles{display:flex;flex-direction:column;gap:6px;margin-top:12px}
-.toggles label{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
-.toggles input{width:18px;height:18px;accent-color:var(--main)}
-.steps{font-size:15px}
-.steps .line{padding:7px 10px;border-radius:10px;background:var(--main-l);margin-bottom:6px}
-.steps .line.key{background:#fff3cf;border:1.5px solid #f0c24b;font-weight:700}
-.steps small{display:block;color:var(--sub);font-weight:400}
-.approx{font-size:13px;color:var(--sub);margin-top:8px}
-.approx b{color:var(--ink)}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--sub);margin-top:8px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px;border:1px solid #0003}
-.quiz .q{padding:10px 0;border-top:1px dashed var(--line)}
-.quiz .q:first-of-type{border-top:0}
-.fb{margin-left:6px;font-weight:700}
-.fb.ok{color:var(--ok)} .fb.bad{color:var(--bad)}
-details{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-top:8px;background:#fcfaff}
-summary{cursor:pointer;font-weight:700}
-.sol{margin-top:8px;padding:8px 10px;border-radius:10px;background:#f1f9f1;font-size:14px}
-.piece{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:760px){.piece{grid-template-columns:1.2fr 1fr}}
-.piece canvas{display:block;width:100%;aspect-ratio:2/1;background:#fbf9ff;border-radius:12px;border:1px solid var(--line)}
-table.cmp{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
-table.cmp th,table.cmp td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
-table.cmp th:first-child,table.cmp td:first-child{text-align:left}
-table.cmp th{color:var(--sub);font-weight:700;font-size:13px}
-table.cmp tr.now td{background:#fff3cf;font-weight:700}
-.tblwrap{overflow-x:auto}
 .pieceBox{margin-top:16px}
 .pieceBox canvas{display:block;width:100%;aspect-ratio:4/3;background:#fbf9ff;border-radius:12px;border:1px solid var(--line)}
 .pmsg{margin-top:8px;padding:8px 12px;border-radius:10px;background:#fff3cf;font-weight:700;font-size:15px;text-align:center}
-.pinfo .line{padding:7px 10px;border-radius:10px;background:var(--main-l);margin-bottom:6px;font-size:15px}
 footer{color:var(--sub);font-size:12px;text-align:center;margin:18px 0 8px}
 ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
@@ -103,7 +74,7 @@ ol.guide{margin:0;padding-left:20px;font-size:14px;color:var(--sub)}
   <div class="grid">
     <section class="card stage" aria-label="시각화">
       <canvas id="cv" role="img" aria-label="원을 등분해 이어 붙여 직사각형으로 만드는 그림"></canvas>
-      <div class="legend" id="legend">
+      <div class="legend">
         <span><i style="background:var(--green)"></i>위쪽 반원 조각</span>
         <span><i style="background:var(--orange)"></i>아래쪽 반원 조각</span>
         <span><i style="background:var(--mag)"></i>원주의 위쪽 반</span>
@@ -140,13 +111,9 @@ const $ = id => document.getElementById(id);
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
 const fmt = x => String(Math.round(x * 1e4) / 1e4);
-const fmt2 = x => String(Math.round(x * 100) / 100);
 
-const S = { n: 16, r: 5, pi: "3.14", p: 0, hint: false, color: true, anim: null, auto: true, zoom: 1, pan: 0.5 };
-const piVal = () => S.pi === "exact" ? Math.PI : parseFloat(S.pi);
-const piTxt = () => S.pi === "exact" ? "3.14159…" : S.pi;
-const num = x => S.pi === "exact" ? fmt2(x) : fmt(x);
-const approxMark = () => S.pi === "exact" ? "≈ " : "= ";
+const S = { n: 16, p: 0, anim: null };     // n: 등분 수, p: 이어 붙이기 진행도(0~1)
+const R_CM = 5, PI = 3.14;                 // 교과서 예시: 반지름 5 cm, 원주율 3.14
 
 /* ---------- 그리기 ---------- */
 /* 구성: 위쪽에 직사각형(이어 붙인 모양)이 만들어지고, 아래쪽 원에서 조각이 하나씩 올라와 붙는다. */
@@ -166,10 +133,6 @@ function camera(L, W, H) {
   const p = S.p, p1 = clamp((p - 0.06) / 0.74, 0, 1);
   const def = { x: W / 2, y: H / 2 };
   const pt = q => ({ x: L.X0 + q * L.N * L.s * L.R, y: L.Y0 + L.R * 0.6 });    // 조각이 올라와 붙는 자리
-  if (!S.auto) {
-    const w = clamp(S.zoom - 1, 0, 1), t = pt(S.pan);
-    return { z: S.zoom, x: def.x + (t.x - def.x) * w, y: def.y + (t.y - def.y) * w };
-  }
   if (L.zAuto <= 1) return { z: 1, x: def.x, y: def.y };   // 확대하지 않을 때는 화면을 움직이지 않음
   const wz = ease(clamp((p - 0.04) / 0.1, 0, 1)) * (1 - ease(clamp((p - 0.84) / 0.16, 0, 1)));
   const M = L.N / 2, qOf = u => clamp((u - L.d) / (1 - L.d), 0, 1);
@@ -198,8 +161,7 @@ function draw() {
   const p = S.p, p1 = clamp((p - 0.06) / 0.74, 0, 1);
   const px = v => v / z;                                  // 화면 픽셀 기준 크기
   const lw = px(z > 1.5 ? 1.3 : (N <= 32 ? 1 : N <= 64 ? 0.6 : 0.4));
-  const colG = S.color ? "#cfeccb" : "#fbe0b0", colO = "#fbe0b0";
-  const arcG = S.color ? "#d6208a" : "#7c4fc0", arcO = S.color ? "#1b9bd8" : "#7c4fc0";
+  const colG = "#cfeccb", colO = "#fbe0b0", arcG = "#d6208a", arcO = "#1b9bd8";
 
   /* 원의 자리(점선)와 반지름: 조각이 떠난 뒤에도 남겨서 크기를 비교할 수 있게 함 */
   ctx.save();
@@ -240,15 +202,6 @@ function draw() {
     ctx.restore();
   }
 
-  /* 어림하기: 원 안·밖 정사각형 */
-  const a0 = clamp(1 - p1 * 12, 0, 1);
-  if (S.hint && a0 > 0) {
-    ctx.save(); ctx.globalAlpha = a0; ctx.lineWidth = px(2.5);
-    ctx.strokeStyle = "#e03a3a"; ctx.strokeRect(CX - R, CY - R, 2 * R, 2 * R);
-    ctx.strokeStyle = "#1f9d55";
-    ctx.beginPath(); ctx.moveTo(CX - R, CY); ctx.lineTo(CX, CY - R); ctx.lineTo(CX + R, CY); ctx.lineTo(CX, CY + R); ctx.closePath(); ctx.stroke();
-    ctx.restore();
-  }
   /* 반지름 표시 (처음에만) */
   const a1 = clamp(1 - p1 * 8, 0, 1);
   if (a1 > 0) {
@@ -258,7 +211,7 @@ function draw() {
     ctx.fillStyle = "#333"; ctx.beginPath(); ctx.arc(CX, CY, px(3), 0, 7); ctx.fill();
     ctx.font = `700 ${px(13)}px sans-serif`; ctx.textAlign = "center";
     ctx.fillStyle = "#fff"; ctx.fillRect(CX + R / 2 - px(30), CY - px(22), px(60), px(17));
-    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - px(9));
+    ctx.fillStyle = "#333"; ctx.fillText("반지름 " + fmt(R_CM) + "cm", CX + R / 2, CY - px(9));
     ctx.restore();
   }
   /* 가로·세로 표시 (다 붙은 뒤) */
@@ -271,17 +224,17 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(xl, yt); ctx.lineTo(xr, yt);
     ctx.moveTo(xl, yt - t5); ctx.lineTo(xl, yt + t5); ctx.moveTo(xr, yt - t5); ctx.lineTo(xr, yt + t5); ctx.stroke();
     ctx.font = `700 ${px(14)}px sans-serif`; ctx.textAlign = "center";
-    ctx.fillText("가로 ≈ 원주 × ½ = " + num(piVal() * S.r) + " cm", (xl + xr) / 2, yt - px(8));
+    ctx.fillText("가로 ≈ 원주 × ½ = " + fmt(PI * R_CM) + " cm", (xl + xr) / 2, yt - px(8));
     const xv = xl - px(12);
     ctx.beginPath(); ctx.moveTo(xv, Y0); ctx.lineTo(xv, Y0 + R);
     ctx.moveTo(xv - t5, Y0); ctx.lineTo(xv + t5, Y0); ctx.moveTo(xv - t5, Y0 + R); ctx.lineTo(xv + t5, Y0 + R); ctx.stroke();
     ctx.save(); ctx.translate(xv - px(8), Y0 + R / 2); ctx.rotate(-Math.PI / 2);
-    ctx.fillText("세로 = 반지름 = " + fmt(S.r) + " cm", 0, 0); ctx.restore();
+    ctx.fillText("세로 = 반지름 = " + fmt(R_CM) + " cm", 0, 0); ctx.restore();
     // 점선 원의 반지름도 함께 보여 줌
     ctx.setLineDash([px(4), px(3)]); ctx.lineWidth = px(1.6);
     ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + R, CY); ctx.stroke(); ctx.setLineDash([]);
     ctx.save(); ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.fillRect(CX + R / 2 - px(34), CY - px(22), px(68), px(18)); ctx.restore();
-    ctx.fillText("반지름 " + fmt(S.r) + "cm", CX + R / 2, CY - px(8));
+    ctx.fillText("반지름 " + fmt(R_CM) + "cm", CX + R / 2, CY - px(8));
     ctx.restore();
   }
 
@@ -301,7 +254,7 @@ function draw() {
   }
 }
 
-/* ---------- 설명·식 ---------- */
+/* ---------- 화면 갱신 ---------- */
 function sync() {
   $("nV").textContent = S.n + "등분";
   $("progV").textContent = Math.round(S.p * 100) + "%";
@@ -326,7 +279,7 @@ function play() {
   S.anim = requestAnimationFrame(step);
 }
 
-/* ---------- 조각 한 개 살펴보기 ---------- */
+/* ---------- 조각 한 개 ---------- */
 const cv2 = $("cv2");
 function drawPiece() {
   const ctx = cv2.getContext("2d");
